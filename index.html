@@ -2,97 +2,107 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Simple Web Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flappy Block</title>
 <style>
   body {
     margin: 0;
-    background-color: #222;
-    color: #fff;
-    font-family: sans-serif;
+    background: #87CEEB; /* màu trời */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
     overflow: hidden;
   }
-  #gameCanvas {
-    background-color: #333;
+  canvas {
+    background: #87CEEB;
     display: block;
-    margin: 0 auto;
-    border: 2px solid #fff;
+    border: 2px solid #000;
   }
 </style>
 </head>
 <body>
 <canvas id="gameCanvas" width="400" height="600"></canvas>
 <script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-let paddle = { x: 150, y: 550, width: 100, height: 10, dx: 0 };
-let ball = { x: 200, y: 100, radius: 10, dy: 3, dx: 3 };
+let bird = { x: 80, y: 300, width: 30, height: 30, dy: 0 };
+const gravity = 0.6;
+const jump = -10;
+
+let pipes = [];
+const pipeWidth = 60;
+const pipeGap = 150;
+let frame = 0;
 let score = 0;
 
-// Điều khiển bằng bàn phím
-document.addEventListener("keydown", e => {
-  if(e.key === "ArrowLeft") paddle.dx = -5;
-  if(e.key === "ArrowRight") paddle.dx = 5;
-});
-document.addEventListener("keyup", e => {
-  if(e.key === "ArrowLeft" || e.key === "ArrowRight") paddle.dx = 0;
-});
+// Nhấn chuột hoặc chạm màn hình → chim nhảy
+function flap() { bird.dy = jump; }
+document.addEventListener('keydown', e => { if(e.key === ' ') flap(); });
+canvas.addEventListener('click', flap);
+canvas.addEventListener('touchstart', flap);
 
-// Vẽ thanh
-function drawPaddle() {
-  ctx.fillStyle = "#0f0";
-  ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
-}
-
-// Vẽ quả bóng
-function drawBall() {
-  ctx.fillStyle = "#f00";
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
-  ctx.fill();
-  ctx.closePath();
-}
-
-// Vẽ điểm
-function drawScore() {
-  ctx.font = "20px Arial";
-  ctx.fillText("Score: " + score, 10, 30);
+// Tạo cặp ống mới
+function createPipe() {
+  const minHeight = 50;
+  const maxHeight = canvas.height - pipeGap - minHeight;
+  const height = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+  pipes.push({ x: canvas.width, y: 0, height: height });
+  pipes.push({ x: canvas.width, y: height + pipeGap, height: canvas.height - (height + pipeGap) });
 }
 
 // Cập nhật vị trí
 function update() {
-  paddle.x += paddle.dx;
-  if(paddle.x < 0) paddle.x = 0;
-  if(paddle.x + paddle.width > canvas.width) paddle.x = canvas.width - paddle.width;
+  frame++;
+  bird.dy += gravity;
+  bird.y += bird.dy;
 
-  ball.x += ball.dx;
-  ball.y += ball.dy;
+  if(frame % 90 === 0) createPipe();
 
-  // Va chạm tường
-  if(ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) ball.dx *= -1;
-  if(ball.y - ball.radius < 0) ball.dy *= -1;
+  for(let i = 0; i < pipes.length; i++) {
+    pipes[i].x -= 3;
 
-  // Va chạm thanh
-  if(ball.y + ball.radius > paddle.y &&
-     ball.x > paddle.x &&
-     ball.x < paddle.x + paddle.width) {
-    ball.dy *= -1;
-    score++;
+    // Va chạm chim với ống
+    if(bird.x < pipes[i].x + pipeWidth &&
+       bird.x + bird.width > pipes[i].x &&
+       bird.y < pipes[i].y + pipes[i].height &&
+       bird.y + bird.height > pipes[i].y) {
+      resetGame();
+    }
+
+    // Tăng điểm khi chim đi qua ống
+    if(pipes[i].x + pipeWidth === bird.x) score++;
   }
 
-  // Thua
-  if(ball.y - ball.radius > canvas.height) {
-    alert("Game Over! Score: " + score);
-    ball.x = 200; ball.y = 100; score = 0;
-  }
+  // Chim rơi đất hoặc ra khỏi màn hình
+  if(bird.y + bird.height > canvas.height || bird.y < 0) resetGame();
+
+  // Loại bỏ ống ra khỏi màn hình
+  pipes = pipes.filter(p => p.x + pipeWidth > 0);
 }
 
 // Vẽ tất cả
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawPaddle();
-  drawBall();
-  drawScore();
+
+  // Chim
+  ctx.fillStyle = 'yellow';
+  ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+
+  // Ống
+  ctx.fillStyle = 'green';
+  pipes.forEach(p => ctx.fillRect(p.x, p.y, pipeWidth, p.height));
+
+  // Điểm
+  ctx.fillStyle = 'black';
+  ctx.font = '24px Arial';
+  ctx.fillText("Score: " + score, 10, 30);
+}
+
+// Reset game
+function resetGame() {
+  bird.y = 300; bird.dy = 0; pipes = []; score = 0; frame = 0;
 }
 
 // Game loop
