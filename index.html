@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Simple Web Game</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #222;
+    color: #fff;
+    font-family: sans-serif;
+    overflow: hidden;
+  }
+  #gameCanvas {
+    background-color: #333;
+    display: block;
+    margin: 0 auto;
+    border: 2px solid #fff;
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+let paddle = { x: 150, y: 550, width: 100, height: 10, dx: 0 };
+let ball = { x: 200, y: 100, radius: 10, dy: 3, dx: 3 };
+let score = 0;
+
+// Điều khiển bằng bàn phím
+document.addEventListener("keydown", e => {
+  if(e.key === "ArrowLeft") paddle.dx = -5;
+  if(e.key === "ArrowRight") paddle.dx = 5;
+});
+document.addEventListener("keyup", e => {
+  if(e.key === "ArrowLeft" || e.key === "ArrowRight") paddle.dx = 0;
+});
+
+// Vẽ thanh
+function drawPaddle() {
+  ctx.fillStyle = "#0f0";
+  ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+}
+
+// Vẽ quả bóng
+function drawBall() {
+  ctx.fillStyle = "#f00";
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
+  ctx.fill();
+  ctx.closePath();
+}
+
+// Vẽ điểm
+function drawScore() {
+  ctx.font = "20px Arial";
+  ctx.fillText("Score: " + score, 10, 30);
+}
+
+// Cập nhật vị trí
+function update() {
+  paddle.x += paddle.dx;
+  if(paddle.x < 0) paddle.x = 0;
+  if(paddle.x + paddle.width > canvas.width) paddle.x = canvas.width - paddle.width;
+
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  // Va chạm tường
+  if(ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) ball.dx *= -1;
+  if(ball.y - ball.radius < 0) ball.dy *= -1;
+
+  // Va chạm thanh
+  if(ball.y + ball.radius > paddle.y &&
+     ball.x > paddle.x &&
+     ball.x < paddle.x + paddle.width) {
+    ball.dy *= -1;
+    score++;
+  }
+
+  // Thua
+  if(ball.y - ball.radius > canvas.height) {
+    alert("Game Over! Score: " + score);
+    ball.x = 200; ball.y = 100; score = 0;
+  }
+}
+
+// Vẽ tất cả
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawPaddle();
+  drawBall();
+  drawScore();
+}
+
+// Game loop
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
